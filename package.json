@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "lint": "eslint .",
-    "test": "echo \"Simulated tests...\" && sleep 10"
+    "test": "echo \"Simulated tests...\" && sleep 20"
   },
   "dependencies": {
     "express": "^4.18.2"
