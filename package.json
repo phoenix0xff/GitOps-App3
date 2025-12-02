@@ -1,0 +1,17 @@
+{
+  "name": "gitops-nodejs-app",
+  "version": "1.0.0",
+  "description": "Node.js app deployed with GitHub Actions and ArgoCD",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "lint": "eslint .",
+    "test": "echo \"Simulated tests...\" && sleep 10"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.1"
+  }
+}

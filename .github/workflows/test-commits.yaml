@@ -1,0 +1,81 @@
+name: Test commits
+
+on:
+  workflow_dispatch:
+    inputs:
+      cycles:
+        description: How many commits to create
+        required: true
+        default: "1"
+      cooldown_seconds:
+        description: Delay between commits (seconds)
+        required: true
+        default: "180"
+      message_prefix:
+        description: Commit message prefix
+        required: true
+        default: "test: commit"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: test-commits-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false  # required if using PAT
+
+      - name: Configure git author
+        run: |
+          git config user.name  "${{ secrets.GIT_USERNAME || 'ci-bot' }}"
+          git config user.email "${{ secrets.GIT_EMAIL    || 'ci-bot@example.com' }}"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Using PAT for pushes (so push triggers other workflows)
+        env:
+          PAT: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          # always assuming we are on main
+          git checkout main
+          git pull --rebase
+          git remote set-url origin "https://x-access-token:${PAT}@github.com/${{ github.repository }}.git"
+
+      - name: Make N small changes to index.js and push each
+        shell: bash
+        env:
+          CYCLES: ${{ github.event.inputs.cycles }}
+          COOLDOWN: ${{ github.event.inputs.cooldown_seconds }}
+          PREFIX: ${{ github.event.inputs.message_prefix }}
+        run: |
+          set -euo pipefail
+          : "${CYCLES:=1}" ; : "${COOLDOWN:=60}" ; : "${PREFIX:=test: commit}"
+          FILE="index.js"
+          for i in $(seq 1 "$CYCLES"); do
+            echo "=== Commit $i/$CYCLES ==="
+            git pull --rebase --autostash || true
+            TS=$(date -u +%Y%m%d%H%M%S)
+
+            # inserting comment (no functional change)
+            if grep -q '^// TEST_COMMITS:' "$FILE"; then
+              sed -i "s|^// TEST_COMMITS:.*$|// TEST_COMMITS: $TS (#$i)|" "$FILE"
+            else
+              sed -i "1s|^|// TEST_COMMITS: $TS (#$i)\n|" "$FILE"
+            fi
+
+            git add "$FILE"
+            git commit -m "$PREFIX #$i @ $TS"
+            git push origin HEAD:main
+
+            if [ "$i" -lt "$CYCLES" ]; then
+              echo "Cooldown $COOLDOWN s..."
+              sleep "$COOLDOWN"
+            fi
+          done
