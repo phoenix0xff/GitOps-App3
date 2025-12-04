@@ -2,7 +2,8 @@ name: GitOps pipeline with ArgoCD (pull-based)
 
 on:
   push:
-    branches: main
+    branches: 
+      - main
 
 env:
   # The two env variables below need to be modified for each source code repo
@@ -75,7 +76,6 @@ jobs:
         run: |
           git config user.name "$GIT_USERNAME"
           git config user.email "$GIT_EMAIL"
-          git pull --rebase
 
       - name: Install yq
         run: |
@@ -93,4 +93,5 @@ jobs:
         run: |
           git add "$MANIFEST_PATH"
           git commit -m "Update $(basename $(dirname $MANIFEST_PATH)) image to $BUILD_TAG" || echo "No changes to commit"
+          git pull --rebase
           git push origin main
